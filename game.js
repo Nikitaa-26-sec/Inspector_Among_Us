@@ -1,0 +1,57 @@
+// Game rules, levels, clues, UI and input
+const $=s=>document.querySelector(s),pk=a=>a[Math.random()*a.length|0],sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
+const NM=[["Aarav","#86b4ea","cap"],["Meera","#f2a9c3","bow"],["Karthik","#e6c386","glasses"],["Divya","#c3adf0","band"],["Rohan","#9ad8ab","scarf"],["Sana","#f3eee6","none"],["You","#ffd36b","band"]];
+const CS={red:"#e0463c",blue:"#3b82f6",green:"#2fb36b"},RI={chalk:"✏️",ink:"🖋️"},CL=Object.keys(CS),RS=Object.keys(RI);
+const ZI={"Door panel":"🚪",Switchboard:"🎛️",Window:"🪟"},ZP={"Door panel":[-6.2,3.3],Switchboard:[4.5,-4.4],Window:[6.2,-1]};
+const TL=["screwdriver","hammer"],TI={screwdriver:"🪛",hammer:"🔨"},LV=[{clues:2,decoys:0,lives:3,timer:0},{clues:3,decoys:1,lives:3,timer:0},{clues:3,decoys:2,lives:2,timer:110}];
+const TIPS=["Look for the ISI mark on plugs and sockets (IS 1293). Fake-marked electricals are a real fire risk.","Check the markings on PVC insulated cables (IS 694). Damaged or unmarked cables cause shocks and fires.","Fire extinguishers need a valid mark and a current inspection tag (IS 15683). Never ignore an expired one."];
+const WP=[[-1.75,1.9],[1.75,1.9],[-5.3,1],[5.3,1],[-1.75,4.5],[1.75,4.5],[0,-3.5],[-5,-2.5],[5,-3]];
+let LVL=0,TOT=[],stp=0,G,mode="title",busy=0,jx=0,jy=0,tgt=null,lastDock="",nv=[],bub=[];const keys={};
+const dot=c=>`<i class="dot" style="background:${CS[c]}"></i>`,Bb=(i,h)=>{bub[i]={h,u:performance.now()+3800}};
+function T(h,c){const d=document.createElement("div");d.className="toast "+(c||"");d.innerHTML=h;$("#toasts").appendChild(d);setTimeout(()=>d.remove(),2200)}
+function tags(){const n=performance.now();$("#tags").childNodes.forEach((el,i)=>{const g=chars[i],p=G.P[i];V.set(g.position.x,3,g.position.z).project(cam);el.style.transform=`translate(${(V.x*.5+.5)*innerWidth}px,${(-V.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;el.style.display=V.z<1?"block":"none";const sp=el.querySelector("span"),h=p.kn?dot(p.a[0])+" "+p.a[0]+" · "+RI[p.a[1]]+" "+p.a[1]+(G.c3?" · "+TI[p.a[2]]+" "+p.a[2]:""):"";if(sp.innerHTML!=h)sp.innerHTML=h;const b=el.firstChild,u=bub[i];if(u&&u.u>n){if(b.innerHTML!=u.h)b.innerHTML=u.h;b.classList.add("on")}else b.classList.remove("on")})}
+function gen(l){const c=LV[l],ti=Math.random()*6|0;for(let n=0;n<800;n++){const P=Array.from({length:6},()=>[pk(CL),pk(RS),pk(TL)]),t=P[ti],sm=P.filter((q,i)=>i!=ti&&q[0]==t[0]&&q[1]==t[1]);
+if(c.clues==2?sm.length==0:(sm.length>=c.decoys&&sm.every(q=>q[2]!=t[2])))return{P,ti}}return gen(l)}
+function init(){const c=LV[LVL],g=gen(LVL);G={lv:LVL,c3:c.clues==3,max:c.lives,lives:c.lives,tl:c.timer,tk:0,fd:{},col:0,res:0,tool:0,P:NM.slice(0,6).map((x,i)=>({n:x[0],a:g.P[i],t:i==g.ti,kn:0}))};
+nv=G.P.map((_,i)=>({x:SP(i)[0],z:SP(i)[1],wait:Math.random()*3}));bub=[];chars.forEach((g,i)=>{if(i<6)g.position.set(SP(i)[0],0,SP(i)[1]);else g.position.set(0,0,5)});cT.set(0,1.2,5)}
+function check(z){const t=G.P.find(p=>p.t);G.fd[z]=1;jingle([660,880]);if(z=="Door panel"){G.col=t.a[0];T(`🚪 Thread colour: ${dot(G.col)} ${G.col}`)}else if(z=="Window"){G.tool=t.a[2];T(`🪟 Tool marks: ${TI[G.tool]} ${G.tool}`)}else{G.res=t.a[1];T(`🎛️ Residue: ${RI[G.res]} ${G.res}`)}hud()}
+function prog(cb){if(busy)return;busy=1;$("#prog").className="on";setTimeout(()=>{$("#prog").className="";busy=0;cb()},700)}
+function act(k){if(!G||busy||!tgt||mode!="play")return;if(tgt.k=="z"){const z=tgt.n;if(k=="check")prog(()=>check(z));return}
+const i=tgt.i,p=G.P[i];if(k=="ask"){p.kn=1;beep(500);Bb(i,`Scarf: ${dot(p.a[0])} ${p.a[0]}<br>Hands: ${RI[p.a[1]]} ${p.a[1]}${G.c3?`<br>Bag: ${TI[p.a[2]]} ${p.a[2]}`:""}`)}else accuse(i)}
+function accuse(i){if(G.P[i].t)return finish(1);G.lives--;hud();Bb(i,"😤 Not me!");tone(150,.3,"sawtooth",.06,70);T("❌ −❤️","b");document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),400);if(G.lives<=0)finish(0)}
+function dockUI(){const d=$("#dock");if(!tgt){d.classList.add("off");return}let h;
+if(tgt.k=="n"){const p=G.P[tgt.i];h=`<div class="tn"><span class="pt" style="background:${NM[tgt.i][1]}">${p.n[0]}</span>${p.n}</div><button class="ib lb" data-a="d" data-k="ask">💬<em>Ask</em></button><button class="ib lb r" data-a="d" data-k="acc">👉<em>Accuse</em></button>`}
+else{const z=tgt.n;h=`<div class="tn">${ZI[z]}${G.fd[z]?" ✓":""}</div>`+(G.fd[z]?"":`<button class="ib lb" data-a="d" data-k="check">🔍<em>Check</em></button>`)}
+if(h!==lastDock){d.innerHTML=h;lastDock=h}d.classList.remove("off")}
+function hud(){$("#evd").innerHTML=`<b>Level ${G.lv+1} of 3 · Your clues</b><br>🚪 Door thread colour: <b>${G.col?dot(G.col)+" "+G.col:"not found yet"}</b><br>🎛️ Switchboard residue: <b>${G.res?RI[G.res]+" "+G.res:"not found yet"}</b>${G.c3?`<br>🪟 Window tool marks: <b>${G.tool?TI[G.tool]+" "+G.tool:"not found yet"}</b>`:""}`;$("#hearts").textContent="Lives "+"❤️".repeat(G.lives)+"🖤".repeat(G.max-G.lives);if(lbls.Window)lbls.Window.visible=!!G.c3;$("#tmr").classList.toggle("off",!G.tl);lastDock=""}
+let lc="";
+function coach(){const c=$("#coach"),b=$("#bcn");let t,s,q=null;
+if(!G.fd["Door panel"]){t="Step 1: Walk to the door panel 🚪 and press Check";s="Move with W A S D or the joystick. Follow the 👇 arrow.";q=ZP["Door panel"]}
+else if(!G.fd.Switchboard){t="Step 2: Walk to the switchboard 🎛️ and press Check";s="Each clue is a hint about who broke the lock.";q=ZP.Switchboard}
+else if(G.c3&&!G.fd.Window){t="Step 3: Walk to the window 🪟 and press Check";s="New clue: tool marks left by the culprit.";q=ZP.Window}
+else if(!G.P.some(p=>p.kn)){t="Step "+(G.c3?4:3)+": Walk up to a student and press Ask";s="They tell you their scarf colour and what is on their hands. Ask everyone.";const g=chars[nst()].position;q=[g.x,g.z]}
+else{t="Step "+(G.c3?5:4)+": Who matches ALL your clues? Press Accuse";s="Compare your clues (top-left) with each name tag. A wrong guess costs 1 life."}
+const h=`<b>${t}</b><small>${s}</small>`;if(lc!=h){c.innerHTML=h;lc=h}c.classList.remove("off");
+if(q){V.set(q[0],2.5,q[1]).project(cam);b.style.transform=`translate(${(V.x*.5+.5)*innerWidth}px,${(-V.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;b.textContent="👇";b.classList.toggle("off",V.z>1)}else b.classList.add("off")}
+function begin(l){LVL=l;$("#title").classList.add("off");$("#end").classList.add("off");$("#hud").classList.remove("off");init();mode="play";wide=0;zm=0;window.focus();lc="";hud();l?intro(l):help();ambient();jingle([392,523])}
+function intro(l){$("#ovc").innerHTML=[0,`<h2>Level 2</h2><p>New clue spot: <b>🪟 Window</b>. It shows the <b>tool marks</b> (🪛 screwdriver or 🔨 hammer).</p><p>Now a look-alike student matches the first two clues. Use all <b>three</b> clues to find the real culprit.</p>`,`<h2>Level 3: Final case</h2><p>Three clues, more look-alikes, only <b>2 lives</b> and a <b>${LV[2].timer}-second timer</b>. Work fast!</p>`][l]+'<p><button class="big" data-a="x">Start level</button></p>';$("#ov").classList.add("on");busy=1}
+function home(){mode="title";["#hud","#end","#coach","#bcn"].forEach(s=>$(s).classList.add("off"));$("#title").classList.remove("off")}
+function finish(w,tm){mode="end";["#hud","#coach","#bcn","#tmr"].forEach(q=>$(q).classList.add("off"));$("#me").style.display="none";const t=G.P.find(p=>p.t),e=$("#end"),last=LVL>=2;if(w)TOT[LVL]=G.lives;
+if(w)jingle(last?[523,659,784,1047,1319]:[523,659,784]);else tone(300,.4,"sawtooth",.06,100);const tot=TOT.reduce((x,y)=>x+(y||0),0);
+e.classList.remove("off");e.innerHTML=`<div style="max-width:520px"><div style="font-size:72px">${w?"🔓":"🔒"}</div><div class="logo" style="font-size:clamp(2rem,8vw,3.2rem)">${w?(last?"All Cases Solved!":"Level "+(LVL+1)+" Complete!"):(tm?"Time's Up!":"Locked In")}</div><div class="stars">${w?"⭐".repeat(G.lives):"☆☆"}</div>${w&&last?`<h2 style="font:700 24px 'Chakra Petch'">Total ⭐ ${tot} / 8</h2>`:""}
+<div class="cd" style="margin:14px auto;max-width:300px"><span class="pt" style="background:${NM[G.P.indexOf(t)][1]};margin:0 auto 4px">${t.n[0]}</span><b>${t.n} broke the lock</b><div style="font-size:20px">${dot(t.a[0])} ${t.a[0]} · ${RI[t.a[1]]} ${t.a[1]}${G.c3?` · ${TI[t.a[2]]} ${t.a[2]}`:""}</div></div>
+<div class="g" style="padding:10px;margin-bottom:14px">💡 <b>BIS tip:</b> ${TIPS[LVL]}</div>
+${w&&!last?'<button class="big" data-a="next">Next level ▶</button>':w?'<button class="big" data-a="start">↻ Play again</button>':'<button class="big" data-a="retry">↻ Try again</button>'} <button class="opt" data-a="home">🏠</button></div>`}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a,k=b.dataset.k;({start(){TOT=[];begin(0)},next(){begin(LVL+1)},retry(){begin(LVL)},home,x:cl,help,mute,d(){act(k)}})[a]()});
+addEventListener("keydown",e=>{const k=e.key.toLowerCase();if(k.startsWith("arrow")||k==" ")e.preventDefault();keys[k]=1;kb(k,1);if(mode!="play")return;if(k=="e"||k==" "){e.preventDefault();const b=$("#dock button");b&&b.click()}if(k=="h")help();if(k=="m")mute();if(k=="1"||k=="2"){const b=document.querySelectorAll("#dock button")[+k-1];b&&b.click()}});
+addEventListener("wheel",e=>{zm=Math.max(-5,Math.min(7,zm+e.deltaY*.01))},{passive:true});
+addEventListener("keyup",e=>{const k=e.key.toLowerCase();keys[k]=0;kb(k,0)});addEventListener("blur",()=>{for(const k in keys)keys[k]=0;document.querySelectorAll(".kc").forEach(x=>x.classList.remove("on"))});
+function kb(k,v){const m={arrowup:"w",arrowleft:"a",arrowdown:"s",arrowright:"d"},el=document.querySelector('.kc[data-k="'+(m[k]||k)+'"]');if(el)el.classList.toggle("on",!!v)}
+const jo=$("#joy");jo.addEventListener("pointerdown",e=>{jd=1;jo.setPointerCapture(e.pointerId);jm(e)});jo.addEventListener("pointermove",e=>{if(jd)jm(e)});jo.addEventListener("pointerup",()=>{jd=0;jx=jy=0;jo.firstChild.style.transform=""});
+function jm(e){const r=jo.getBoundingClientRect();let x=(e.clientX-r.left-60)/40,y=(e.clientY-r.top-60)/40;const m=Math.hypot(x,y);if(m>1){x/=m;y/=m}jx=x;jy=-y;jo.firstChild.style.transform=`translate(${x*35}px,${y*35}px)`}
+function help(){$("#ovc").innerHTML=`<h2>🎯 Your mission</h2><p style="text-align:left;margin:0 0 8px">Someone broke the door lock. Find out <b>who</b> by matching clues.</p>
+<div style="text-align:left;line-height:1.75"><b>Step 1.</b> Check the 🚪 door panel and the 🎛️ switchboard. Each gives a clue: a <b>thread colour</b> and a <b>residue</b> (✏️ chalk or 🖋️ ink).<br><b>Step 2.</b> Walk up to each student and press 💬 <b>Ask</b>. They show their <b>scarf colour</b> and what is on their <b>hands</b>.<br><b>Step 3.</b> Press 👉 <b>Accuse</b> on the student who matches <b>both</b> clues.</div>
+<h3 style="font:700 17px 'Chakra Petch';margin:12px 0 4px">What the symbols mean</h3><div style="text-align:left;line-height:1.7;font-size:14px">🚪 Door panel (clue spot) · 🎛️ Switchboard (clue spot)<br>👇 Go here next · gold ring = you're close enough to act<br>Lives ❤️❤️❤️ = 3 wrong guesses allowed<br>✏️ chalk dust · 🖋️ ink stain</div>
+<h3 style="font:700 17px 'Chakra Petch';margin:12px 0 4px">Controls</h3><div style="text-align:left;font-size:14px;line-height:1.7">Move: W A S D / arrow keys / joystick<br>Turn camera: drag · Zoom: scroll<br>Main button: E or Space</div><p><button class="big" data-a="x">Got it, start!</button></p>`;$("#ov").classList.add("on");busy=1}
+function cl(){$("#ov").classList.remove("on");busy=0;window.focus()}
+try{world();G={P:[]}}catch(err){console.error(err);$("#cv").innerHTML='<p style="padding:30px">3D is not supported on this device.</p>'}
