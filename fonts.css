@@ -1,0 +1,5 @@
+/* Self-hosted Google Fonts (via @fontsource), so the game works offline */
+@font-face{font-family:"Chakra Petch";font-weight:500;font-style:normal;font-display:swap;src:url(../fonts/chakra-petch-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-weight:700;font-style:normal;font-display:swap;src:url(../fonts/chakra-petch-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito";font-weight:700;font-style:normal;font-display:swap;src:url(../fonts/nunito-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito";font-weight:800;font-style:normal;font-display:swap;src:url(../fonts/nunito-latin-800-normal.woff2) format("woff2")}
